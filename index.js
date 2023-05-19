@@ -26,18 +26,52 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const ToyCarsCollection = client.db('ToyCarsDB').collection('ToyCarsCollection');
 
         //CRUD functions go here
 
         //READ all
-        app.get('/AllToys', async (req, res) => {
+        app.get('/allToys', async (req, res) => {
             const cursor = ToyCarsCollection.find();
             const result = await cursor.toArray();
             res.send(result);
         })
+
+        // Read one
+        app.get("/singleToy/:id", async (req, res) => {
+            console.log(req.params.id);
+            const toy = await ToyCarsCollection.findOne({
+                _id: new ObjectId(req.params.id),
+            });
+            res.send(toy);
+        });
+
+        //Read by search
+        app.get("/getToysByText/:text", async (req, res) => {
+            const text = req.params.text;
+            console.log(text);
+            const result = await ToyCarsCollection
+                .find({
+                    $or: [
+                        { name: { $regex: text, $options: "i" } },
+                    ],
+                })
+                .toArray();
+            res.send(result);
+        });
+
+        //Read by sub-category
+        app.get('/getToysBySubCategory/:text', async (req, res) => {
+            console.log("text", req.params.text);
+            const text = req.params.text;
+            const result = await ToyCarsCollection
+                .find({ sub_category: text })
+                .toArray();
+            console.log("sub category", result);
+            res.send(result);
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
