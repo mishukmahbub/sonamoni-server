@@ -109,6 +109,22 @@ async function run() {
             res.send(result);
         })
 
+        // Add toy
+        app.post("/addToys", async (req, res) => {
+            const body = req.body;
+            body.createdAt = new Date();
+            console.log(body);
+            const result = await ToyCarsCollection.insertOne(body);
+            if (result?.insertedId) {
+              return res.status(200).send(result);
+            } else {
+              return res.status(404).send({
+                message: "can not insert try again later",
+                status: false,
+              });
+            }
+          });
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
