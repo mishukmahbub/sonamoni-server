@@ -35,7 +35,7 @@ async function run() {
         //READ all
         app.get('/allToys', async (req, res) => {
             const cursor = ToyCarsCollection.find();
-            const result = (await cursor.limit(20).toArray());
+            const result = (await cursor.toArray());
             res.send(result);
         })
 
@@ -84,6 +84,18 @@ async function run() {
             res.send(result);
           });
 
+        // Read by email
+        app.get("/myToys/:email", async (req, res) => {
+            // console.log(req.params.email);
+            const result = await ToyCarsCollection
+              .find({
+                seller_email: req.params.email,
+              })
+              .sort({ price: sort })
+              .toArray();
+            res.send(result);
+          });
+
           // update toy info
           app.put("/editToy/:id", async (req, res) => {
             const id = req.params.id;
@@ -92,8 +104,8 @@ async function run() {
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
               $set: {
-                price: parseInt(req.body.price),
-                available_quantity: parseInt(req.body.available_quantity),
+                price: req.body.price,
+                available_quantity: req.body.available_quantity,
                 detail_description: req.body.detail_description,
               },
             };
@@ -112,17 +124,18 @@ async function run() {
         // Add toy
         app.post("/addToys", async (req, res) => {
             const body = req.body;
-            body.createdAt = new Date();
+            // body.createdAt = new Date();
             console.log(body);
             const result = await ToyCarsCollection.insertOne(body);
-            if (result?.insertedId) {
-              return res.status(200).send(result);
-            } else {
-              return res.status(404).send({
-                message: "can not insert try again later",
-                status: false,
-              });
-            }
+            res.send(result);
+            // if (result?.insertedId) {
+            //   return res.status(200).send(result);
+            // } else {
+            //   return res.status(404).send({
+            //     message: "can not insert try again later",
+            //     status: false,
+            //   });
+            // }
           });
 
 
