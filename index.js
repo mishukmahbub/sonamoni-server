@@ -16,145 +16,138 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
 });
 
 async function run() {
-    try {
-        // Connect the client to the server	(optional starting in v4.7)
-        // await client.connect();
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    // await client.connect();
 
-        const ToyCarsCollection = client.db('ToyCarsDB').collection('ToyCarsCollection');
+    const ToyCarsCollection = client.db('ToyCarsDB').collection('ToyCarsCollection');
 
-        //CRUD functions go here
+    //CRUD functions go here
 
-        //READ all
-        app.get('/allToys', async (req, res) => {
-            const cursor = ToyCarsCollection.find();
-            const result = (await cursor.toArray());
-            res.send(result);
+    //READ all
+    app.get('/allToys', async (req, res) => {
+      const cursor = ToyCarsCollection.find();
+      const result = (await cursor.limit(20).toArray());
+      res.send(result);
+    })
+
+    // Read one
+    app.get("/singleToy/:id", async (req, res) => {
+      // console.log(req.params.id);
+      const toy = await ToyCarsCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(toy);
+    });
+
+    //Read by search
+    app.get("/getToysByText/:text", async (req, res) => {
+      const text = req.params.text;
+
+      const result = await ToyCarsCollection
+        .find({
+          $or: [
+            { name: { $regex: text, $options: "i" } },
+          ],
         })
+        .toArray();
+      res.send(result);
+    });
 
-        // Read one
-        app.get("/singleToy/:id", async (req, res) => {
-            // console.log(req.params.id);
-            const toy = await ToyCarsCollection.findOne({
-                _id: new ObjectId(req.params.id),
-            });
-            res.send(toy);
-        });
+    //Read by sub-category
+    app.get('/getToysBySubCategory/:text', async (req, res) => {
 
-        //Read by search
-        app.get("/getToysByText/:text", async (req, res) => {
-            const text = req.params.text;
-            
-            const result = await ToyCarsCollection
-                .find({
-                    $or: [
-                        { name: { $regex: text, $options: "i" } },
-                    ],
-                })
-                .toArray();
-            res.send(result);
-        });
+      const text = req.params.text;
+      const result = await ToyCarsCollection
+        .find({ sub_category: text })
+        .toArray();
 
-        //Read by sub-category
-        app.get('/getToysBySubCategory/:text', async (req, res) => {
-            
-            const text = req.params.text;
-            const result = await ToyCarsCollection
-                .find({ sub_category: text })
-                .toArray();
-            
-            res.send(result);
-        });
+      res.send(result);
+    });
 
-        // Read by email
-        app.get("/myToys/:email", async (req, res) => {
-            // console.log(req.params.email);
-            const result = await ToyCarsCollection
-              .find({
-                seller_email: req.params.email,
-              })
-              .toArray();
-            res.send(result);
-          });
-
-        // Read by email
-        app.get("/myToys/:email", async (req, res) => {
-            // console.log(req.params.email);
-            const result = await ToyCarsCollection
-              .find({
-                seller_email: req.params.email,
-              })
-              .sort({ price: sort })
-              .toArray();
-            res.send(result);
-          });
-
-          // update toy info
-          app.put("/editToy/:id", async (req, res) => {
-            const id = req.params.id;
-            // console.log(id);
-            // console.log(parseInt(req.body.price));
-            const filter = { _id: new ObjectId(id) };
-            const updateDoc = {
-              $set: {
-                price: req.body.price,
-                available_quantity: req.body.available_quantity,
-                detail_description: req.body.detail_description,
-              },
-            };
-            const result = await ToyCarsCollection.updateOne(filter, updateDoc);
-            res.send(result);
-          });
-
-          // delete toy
-          app.delete('/deleteToy/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await ToyCarsCollection.deleteOne(query);
-            res.send(result);
+    // Read by email
+    app.get("/myToys/:email", async (req, res) => {
+      // console.log(req.params.email);
+      const sort = req.query.sort === "desc" ? -1 : 1;
+      // console.log(sort);
+      const result = await ToyCarsCollection
+        .find({
+          seller_email: req.params.email,
         })
+        .sort({ price: sort })
+        .collation({ locale: "en_US", numericOrdering: true })
+        .toArray();
+        // console.log(sort);
+      res.send(result);
+    });
 
-        // Add toy
-        app.post("/addToys", async (req, res) => {
-            const body = req.body;
-            // body.createdAt = new Date();
-            console.log(body);
-            const result = await ToyCarsCollection.insertOne(body);
-            res.send(result);
-            // if (result?.insertedId) {
-            //   return res.status(200).send(result);
-            // } else {
-            //   return res.status(404).send({
-            //     message: "can not insert try again later",
-            //     status: false,
-            //   });
-            // }
-          });
+    // update toy info
+    app.put("/editToy/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id);
+      // console.log(parseInt(req.body.price));
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          price: req.body.price,
+          available_quantity: req.body.available_quantity,
+          detail_description: req.body.detail_description,
+        },
+      };
+      const result = await ToyCarsCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    // delete toy
+    app.delete('/deleteToy/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await ToyCarsCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    // Add toy
+    app.post("/addToys", async (req, res) => {
+      const body = req.body;
+      // body.createdAt = new Date();
+      console.log(body);
+      const result = await ToyCarsCollection.insertOne(body);
+      res.send(result);
+      // if (result?.insertedId) {
+      //   return res.status(200).send(result);
+      // } else {
+      //   return res.status(404).send({
+      //     message: "can not insert try again later",
+      //     status: false,
+      //   });
+      // }
+    });
 
 
-        // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-        // Ensures that the client will close when you finish/error
-        // await client.close();
-    }
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
+    // await client.close();
+  }
 }
 run().catch(console.dir);
 
 
 
 app.get('/', (req, res) => {
-    res.send('Toy server is running')
+  res.send('Toy server is running')
 })
 
 app.listen(port, () => {
-    console.log(`Toy Server is running on port: ${port}`)
+  console.log(`Toy Server is running on port: ${port}`)
 })
