@@ -35,7 +35,7 @@ async function run() {
         //READ all
         app.get('/allToys', async (req, res) => {
             const cursor = ToyCarsCollection.find();
-            const result = await cursor.toArray();
+            const result = (await cursor.limit(20).toArray());
             res.send(result);
         })
 
